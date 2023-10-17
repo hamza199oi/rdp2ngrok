@@ -1,7 +1,7 @@
 Write-Host "rdp2ngrok by carince"
 # Check for admin
 if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList "-File `"$($MyInvocation.MyCommand.Path)`"  `"$($MyInvocation.MyCommand.UnboundArguments)`""
+    Write-Host "rdp2ngrok must be ran as administrator."
     Exit
 }
 

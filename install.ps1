@@ -2,7 +2,6 @@ Write-Host "rdp2ngrok by carince"
 # Check for admin
 if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "rdp2ngrok must be ran as administrator."
-    Exit
 }
 
 # Download Python

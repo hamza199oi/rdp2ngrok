@@ -1,28 +1,54 @@
 Write-Host "rdp2ngrok by carince"
-# Check for admin
-if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "rdp2ngrok must be ran as administrator."
+[System.Security.Principal.WindowsPrincipal] $principal = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$isUserAdmin = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isUserAdmin) {
+    Write-Host 
+    Write-Host 'rdp2ngrok needs admin perms'
+    Exit 1
 }
 
-# Download Python
+$pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe"
+$pythonInstaller = "$($env:TEMP)\python.exe"
+Write-Host 'Downloading Python Installer...'
+Start-BitsTransfer -Source $pythonUrl -Destination "$pythonInstaller"
+
+Write-Host "Installing Python..."
+try {
+    Start-Process -FilePath $pythonInstaller -ArgumentList "/passive InstallAllUsers=1 PrependPath=1" -Wait
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    Write-Host 'Installed Python.'
+}
+catch {
+    Write-Host "Python installation failed:" $_
+    Exit 1
+}
+
+$pythonExe = where.exe python.exe
+$pythonwExe = where.exe pythonw.exe
+if ($pythonExe -contains "C:\Program Files\Python312\python.exe" -and $pythonwExe -contains "C:\Program Files\Python312\pythonw.exe") {
+    $pythonExe = "C:\Program Files\Python312\python.exe"
+    $pythonwExe = "C:\Program Files\Python312\pythonw.exe"
+}
+else {
+    Write-Host "Python was not found at expected directory. `npython.exe: $pythonExe `npythonw.exe: $pythonwExe"
+    Exit 1
+}
+
 Write-Host
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Write-Host "Downloading python..."
-Start-BitsTransfer -Source "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe" -Destination "python-installer.exe"
+Write-Host "Downloading app script..."
+$appDir = "C:\Users\Public\rdp2ngrok"
+$appScript = "$appDir\app.py"
+New-Item -ItemType Directory -Path $appDir | Out-Null
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/carince/rdp2ngrok/main/app.py" -OutFile $appScript
+Start-Process -FilePath $pythonExe -ArgumentList "-m pip install ngrok requests" -WorkingDirectory $appDir -Wait
 
-# Install Python
-Write-Host
-Write-Host "Installing python..."
-Start-Process -FilePath .\python-installer.exe -ArgumentList "/passive InstallAllUsers=0 InstallLauncherAllUsers=0 PrependPath=1 Include_test=0"
-Start-Sleep -Seconds 5
-Write-Host "Refreshing PATH"
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+$apppath = 'powershell.exe'
+$taskname = 'rdp2ngrok'
+$action = New-ScheduledTaskAction -Execute $apppath -Argument "-NoLogo -NoProfile -Command & `'$pythonwExe`' $appScript"
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -WakeToRun
+Register-ScheduledTask -Action $action -Trigger $trigger -TaskName $taskname -Settings $settings -Force | Write-Verbose
+Write-Host 'The install task has been scheduled. Starting the task...'
+# Start-ScheduledTask -TaskName $taskname
 
-# Download script
-dir = "C:\Program Files\Python312"
-Set-Location $dir
-Write-Host "Downloading script..."
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/carince/rdp2ngrok/master/app.py" -OutFile "app.py"
-python -m pip install ngrok requests
-
-Read-Host -Prompt "Press Enter to exit"
+Read-Host "Press enter to exit"

@@ -42,13 +42,13 @@ New-Item -ItemType Directory -Path $appDir | Out-Null
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/carince/rdp2ngrok/main/app.py" -OutFile $appScript
 Start-Process -FilePath $pythonExe -ArgumentList "-m pip install ngrok requests" -WorkingDirectory $appDir -Wait
 
-$apppath = 'powershell.exe'
+$appPath = 'powershell.exe'
 $taskname = 'rdp2ngrok'
-$action = New-ScheduledTaskAction -Execute $apppath -Argument "-NoLogo -NoProfile -Command & `'$pythonwExe`' $appScript"
+$action = New-ScheduledTaskAction -Execute $appPath -Argument "-NoLogo -NoProfile -Command & `'$pythonwExe`' $appScript"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -WakeToRun
 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName $taskname -Settings $settings -Force | Write-Verbose
 Write-Host 'The install task has been scheduled. Starting the task...'
-# Start-ScheduledTask -TaskName $taskname
+Start-ScheduledTask -TaskName $taskname
 
 Read-Host "Press enter to exit"

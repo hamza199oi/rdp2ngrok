@@ -9,7 +9,7 @@ logger = logging.getLogger('rdp2ngrok')
 
 # Ngrok
 async def start_ngrok():
-    logger.info("Starting ngrok")
+    logger.info("Starting ngrok...")
     listener = await ngrok.connect(3389, "tcp", authtoken=os.getenv("NGROK_AUTHTOKEN"))
     return listener
 
@@ -24,8 +24,8 @@ async def send_webhook(url):
     result = requests.post(os.getenv("WEBHOOK"), json = data)
     try:
         result.raise_for_status()   
-    except requests.exceptions.HTTPError as err: print(err)
-    else: logger.info(f"Sent webhook payload successfully.")
+    except requests.exceptions.HTTPError as err: logging.error(err)
+    else: logger.info(f"Sent webhook payload successfully. Code: {result.status_code}")
 
 async def main():
     listener = await start_ngrok()
@@ -33,6 +33,5 @@ async def main():
     while (await ngrok.get_listeners()):
         time.sleep(60)
     logger.info("ngrok stopped unexpectedly, running again...")
-    
 
 asyncio.run(main())
